@@ -1,0 +1,852 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ClearFrame — Remove Watermarks</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #080808;
+      --surface: #111111;
+      --surface2: #181818;
+      --border: #222222;
+      --accent: #e8ff47;
+      --accent2: #47ffe8;
+      --text: #f0f0f0;
+      --muted: #666;
+      --danger: #ff4747;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Syne', sans-serif;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Grain overlay */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 1000;
+      opacity: 0.4;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 24px 48px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .logo {
+      font-size: 1.2rem;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .logo-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent);
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.8); }
+    }
+
+    .badge {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.7rem;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      padding: 4px 10px;
+      border-radius: 100px;
+      color: var(--muted);
+      letter-spacing: 1px;
+    }
+
+    main {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 80px 24px 120px;
+    }
+
+    .hero {
+      text-align: center;
+      margin-bottom: 64px;
+    }
+
+    .hero-tag {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.72rem;
+      color: var(--accent);
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      margin-bottom: 20px;
+      display: inline-block;
+    }
+
+    h1 {
+      font-size: clamp(3rem, 8vw, 5.5rem);
+      font-weight: 800;
+      line-height: 0.95;
+      letter-spacing: -3px;
+      margin-bottom: 24px;
+    }
+
+    h1 span {
+      color: var(--accent);
+      position: relative;
+      display: inline-block;
+    }
+
+    h1 span::after {
+      content: '';
+      position: absolute;
+      bottom: 4px;
+      left: 0;
+      width: 100%;
+      height: 3px;
+      background: var(--accent);
+      transform: scaleX(0);
+      transform-origin: left;
+      animation: underline-in 0.8s 0.5s ease forwards;
+    }
+
+    @keyframes underline-in {
+      to { transform: scaleX(1); }
+    }
+
+    .hero-sub {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.9rem;
+      color: var(--muted);
+      line-height: 1.7;
+      max-width: 480px;
+      margin: 0 auto;
+    }
+
+    /* Upload Zone */
+    .upload-zone {
+      border: 1.5px dashed var(--border);
+      border-radius: 16px;
+      padding: 64px 32px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      background: var(--surface);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .upload-zone::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse at center, rgba(232, 255, 71, 0.04) 0%, transparent 70%);
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+
+    .upload-zone:hover, .upload-zone.drag-over {
+      border-color: var(--accent);
+      background: var(--surface2);
+    }
+
+    .upload-zone:hover::before, .upload-zone.drag-over::before {
+      opacity: 1;
+    }
+
+    .upload-icon {
+      width: 56px;
+      height: 56px;
+      margin: 0 auto 20px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.6rem;
+      transition: transform 0.3s;
+    }
+
+    .upload-zone:hover .upload-icon {
+      transform: translateY(-4px);
+    }
+
+    .upload-label {
+      font-size: 1rem;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .upload-hint {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.75rem;
+      color: var(--muted);
+    }
+
+    #fileInput { display: none; }
+
+    /* Options */
+    .options-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 20px 0;
+    }
+
+    .toggle-wrap {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+
+    .toggle {
+      width: 40px;
+      height: 22px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 100px;
+      position: relative;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .toggle.active {
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+
+    .toggle::after {
+      content: '';
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: var(--bg);
+      transition: transform 0.2s;
+    }
+
+    .toggle.active::after {
+      transform: translateX(18px);
+    }
+
+    /* Button */
+    .btn-process {
+      width: 100%;
+      padding: 18px;
+      background: var(--accent);
+      color: var(--bg);
+      border: none;
+      border-radius: 12px;
+      font-family: 'Syne', sans-serif;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+      letter-spacing: 0.5px;
+      margin-top: 16px;
+      display: none;
+    }
+
+    .btn-process:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 32px rgba(232, 255, 71, 0.3);
+    }
+
+    .btn-process:active {
+      transform: translateY(0);
+    }
+
+    .btn-process:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    /* File Preview */
+    .file-preview {
+      display: none;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px 20px;
+      margin-top: 16px;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .file-preview.visible { display: flex; }
+
+    .file-icon {
+      width: 40px;
+      height: 40px;
+      background: var(--surface2);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+      flex-shrink: 0;
+    }
+
+    .file-info { flex: 1; min-width: 0; }
+    .file-name {
+      font-size: 0.85rem;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .file-size {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.72rem;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    .btn-remove {
+      background: none;
+      border: none;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 1.1rem;
+      padding: 4px;
+      transition: color 0.2s;
+      flex-shrink: 0;
+    }
+
+    .btn-remove:hover { color: var(--danger); }
+
+    /* Progress */
+    .progress-section {
+      display: none;
+      margin-top: 32px;
+    }
+
+    .progress-section.visible { display: block; }
+
+    .progress-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .progress-label {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.78rem;
+      color: var(--muted);
+    }
+
+    .progress-pct {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.78rem;
+      color: var(--accent);
+      font-weight: 500;
+    }
+
+    .progress-bar-bg {
+      height: 4px;
+      background: var(--surface2);
+      border-radius: 100px;
+      overflow: hidden;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      background: var(--accent);
+      border-radius: 100px;
+      width: 0%;
+      transition: width 0.4s ease;
+    }
+
+    .status-msg {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.78rem;
+      color: var(--muted);
+      margin-top: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+      animation: pulse 1s ease infinite;
+      flex-shrink: 0;
+    }
+
+    /* Download */
+    .download-section {
+      display: none;
+      margin-top: 32px;
+      padding: 24px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      text-align: center;
+    }
+
+    .download-section.visible { display: block; }
+
+    .download-icon {
+      font-size: 2.5rem;
+      margin-bottom: 12px;
+    }
+
+    .download-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    .download-sub {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.78rem;
+      color: var(--muted);
+      margin-bottom: 20px;
+    }
+
+    .btn-download {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 14px 32px;
+      background: var(--accent2);
+      color: var(--bg);
+      border: none;
+      border-radius: 10px;
+      font-family: 'Syne', sans-serif;
+      font-size: 0.9rem;
+      font-weight: 700;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all 0.2s;
+    }
+
+    .btn-download:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 32px rgba(71, 255, 232, 0.3);
+    }
+
+    .btn-new {
+      display: inline-block;
+      margin-top: 12px;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.78rem;
+      color: var(--muted);
+      cursor: pointer;
+      text-decoration: underline;
+      background: none;
+      border: none;
+    }
+
+    .btn-new:hover { color: var(--text); }
+
+    /* Error */
+    .error-msg {
+      display: none;
+      background: rgba(255, 71, 71, 0.08);
+      border: 1px solid rgba(255, 71, 71, 0.3);
+      border-radius: 10px;
+      padding: 14px 18px;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.8rem;
+      color: var(--danger);
+      margin-top: 16px;
+    }
+
+    .error-msg.visible { display: block; }
+
+    /* Config notice */
+    .config-notice {
+      background: rgba(232, 255, 71, 0.06);
+      border: 1px solid rgba(232, 255, 71, 0.2);
+      border-radius: 10px;
+      padding: 14px 18px;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.78rem;
+      color: rgba(232, 255, 71, 0.7);
+      margin-bottom: 32px;
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+    }
+
+    .config-notice strong { color: var(--accent); }
+
+    /* How it works */
+    .how-section {
+      margin-top: 80px;
+      padding-top: 48px;
+      border-top: 1px solid var(--border);
+    }
+
+    .section-label {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.7rem;
+      color: var(--muted);
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      margin-bottom: 32px;
+    }
+
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+    }
+
+    @media (max-width: 600px) {
+      .steps { grid-template-columns: 1fr; }
+      header { padding: 16px 20px; }
+      main { padding: 48px 16px 80px; }
+      h1 { letter-spacing: -2px; }
+    }
+
+    .step {
+      padding: 24px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+    }
+
+    .step-num {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.7rem;
+      color: var(--accent);
+      margin-bottom: 12px;
+    }
+
+    .step-title {
+      font-size: 0.95rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .step-desc {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.75rem;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    /* Animate in */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .hero { animation: fadeUp 0.6s ease both; }
+    .upload-zone { animation: fadeUp 0.6s 0.1s ease both; }
+    .config-notice { animation: fadeUp 0.6s 0.05s ease both; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="logo">
+      <div class="logo-dot"></div>
+      ClearFrame
+    </div>
+    <div class="badge">MVP v0.1</div>
+  </header>
+
+  <main>
+    <div class="hero">
+      <span class="hero-tag">// AI-powered</span>
+      <h1>Remove<br /><span>watermarks</span><br />instantly</h1>
+      <p class="hero-sub">
+        Detecção automática via IA + inpainting LaMa.<br/>
+        Upload, processa, baixa. Sem complicação.
+      </p>
+    </div>
+
+    <div class="config-notice">
+      <span>⚙️</span>
+      <span>
+        <strong>Config:</strong> Edite <code>API_BASE_URL</code> no script abaixo para apontar para seu HuggingFace Space.
+        Ex: <code>https://SEU-USER-watermark-remover.hf.space</code>
+      </span>
+    </div>
+
+    <!-- Upload -->
+    <div class="upload-zone" id="uploadZone">
+      <input type="file" id="fileInput" accept="video/*" />
+      <div class="upload-icon">🎬</div>
+      <div class="upload-label">Arraste seu vídeo aqui</div>
+      <div class="upload-hint">MP4, MOV, AVI • até 500MB</div>
+    </div>
+
+    <!-- File preview -->
+    <div class="file-preview" id="filePreview">
+      <div class="file-icon">📹</div>
+      <div class="file-info">
+        <div class="file-name" id="fileName">video.mp4</div>
+        <div class="file-size" id="fileSize">0 MB</div>
+      </div>
+      <button class="btn-remove" id="btnRemove" title="Remover">✕</button>
+    </div>
+
+    <!-- Options -->
+    <div class="options-row" id="optionsRow" style="display:none">
+      <div class="toggle-wrap">
+        <div class="toggle active" id="toggleLama"></div>
+        <span>Usar LaMa AI (melhor qualidade, mais lento)</span>
+      </div>
+    </div>
+
+    <!-- Process button -->
+    <button class="btn-process" id="btnProcess">✦ Processar Vídeo</button>
+
+    <!-- Error -->
+    <div class="error-msg" id="errorMsg"></div>
+
+    <!-- Progress -->
+    <div class="progress-section" id="progressSection">
+      <div class="progress-header">
+        <span class="progress-label">Processando frames...</span>
+        <span class="progress-pct" id="progressPct">0%</span>
+      </div>
+      <div class="progress-bar-bg">
+        <div class="progress-bar-fill" id="progressFill"></div>
+      </div>
+      <div class="status-msg">
+        <div class="status-dot"></div>
+        <span id="statusText">Detectando marca d'água...</span>
+      </div>
+    </div>
+
+    <!-- Download -->
+    <div class="download-section" id="downloadSection">
+      <div class="download-icon">✅</div>
+      <div class="download-title">Pronto!</div>
+      <div class="download-sub">Marca d'água removida com sucesso</div>
+      <a class="btn-download" id="btnDownload" href="#" download>
+        ⬇ Baixar Vídeo
+      </a>
+      <br/>
+      <button class="btn-new" id="btnNew">Processar outro vídeo</button>
+    </div>
+
+    <!-- How it works -->
+    <div class="how-section">
+      <div class="section-label">// Como funciona</div>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">01</div>
+          <div class="step-title">Detecção automática</div>
+          <div class="step-desc">CV2 analisa os frames buscando padrões anômalos de contraste e frequência nos cantos do vídeo.</div>
+        </div>
+        <div class="step">
+          <div class="step-num">02</div>
+          <div class="step-title">Inpainting LaMa</div>
+          <div class="step-desc">O modelo LaMa preenche a região mascarada com conteúdo gerado — frame a frame, de forma coerente.</div>
+        </div>
+        <div class="step">
+          <div class="step-num">03</div>
+          <div class="step-title">Download limpo</div>
+          <div class="step-desc">O vídeo resultante é exportado em MP4 com a mesma resolução e taxa de quadros original.</div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    // ⚠️ CONFIGURE AQUI com a URL do seu HuggingFace Space
+    // Após o deploy no HuggingFace, substitua a URL abaixo:
+    const API_BASE_URL = 'https://SEU-USUARIO-watermark-remover.hf.space';
+
+    let selectedFile = null;
+    let useLama = true;
+    let currentJobId = null;
+    let pollInterval = null;
+
+    const uploadZone = document.getElementById('uploadZone');
+    const fileInput = document.getElementById('fileInput');
+    const filePreview = document.getElementById('filePreview');
+    const fileName = document.getElementById('fileName');
+    const fileSize = document.getElementById('fileSize');
+    const btnRemove = document.getElementById('btnRemove');
+    const optionsRow = document.getElementById('optionsRow');
+    const btnProcess = document.getElementById('btnProcess');
+    const toggleLama = document.getElementById('toggleLama');
+    const progressSection = document.getElementById('progressSection');
+    const progressFill = document.getElementById('progressFill');
+    const progressPct = document.getElementById('progressPct');
+    const statusText = document.getElementById('statusText');
+    const downloadSection = document.getElementById('downloadSection');
+    const btnDownload = document.getElementById('btnDownload');
+    const btnNew = document.getElementById('btnNew');
+    const errorMsg = document.getElementById('errorMsg');
+
+    function formatBytes(bytes) {
+      if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+      return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+    }
+
+    function showFile(file) {
+      selectedFile = file;
+      fileName.textContent = file.name;
+      fileSize.textContent = formatBytes(file.size);
+      filePreview.classList.add('visible');
+      optionsRow.style.display = 'flex';
+      btnProcess.style.display = 'block';
+      errorMsg.classList.remove('visible');
+    }
+
+    function reset() {
+      selectedFile = null;
+      filePreview.classList.remove('visible');
+      optionsRow.style.display = 'none';
+      btnProcess.style.display = 'none';
+      progressSection.classList.remove('visible');
+      downloadSection.classList.remove('visible');
+      errorMsg.classList.remove('visible');
+      fileInput.value = '';
+      if (pollInterval) clearInterval(pollInterval);
+    }
+
+    // Upload zone click
+    uploadZone.addEventListener('click', () => fileInput.click());
+
+    fileInput.addEventListener('change', (e) => {
+      if (e.target.files[0]) showFile(e.target.files[0]);
+    });
+
+    // Drag and drop
+    uploadZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      uploadZone.classList.add('drag-over');
+    });
+    uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('drag-over'));
+    uploadZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      uploadZone.classList.remove('drag-over');
+      const file = e.dataTransfer.files[0];
+      if (file && file.type.startsWith('video/')) showFile(file);
+    });
+
+    // Remove file
+    btnRemove.addEventListener('click', reset);
+
+    // Toggle LaMa
+    toggleLama.addEventListener('click', () => {
+      useLama = !useLama;
+      toggleLama.classList.toggle('active', useLama);
+    });
+
+    // Process
+    btnProcess.addEventListener('click', async () => {
+      if (!selectedFile) return;
+
+      btnProcess.disabled = true;
+      progressSection.classList.add('visible');
+      downloadSection.classList.remove('visible');
+      errorMsg.classList.remove('visible');
+      progressFill.style.width = '0%';
+      progressPct.textContent = '0%';
+      statusText.textContent = "Enviando vídeo...";
+
+      try {
+        const formData = new FormData();
+        formData.append('file', selectedFile);
+
+        const uploadRes = await fetch(
+          `${API_BASE_URL}/upload?use_lama=${useLama}`,
+          { method: 'POST', body: formData }
+        );
+
+        if (!uploadRes.ok) throw new Error('Erro ao enviar vídeo');
+        const { job_id } = await uploadRes.json();
+        currentJobId = job_id;
+
+        statusText.textContent = "Detectando marca d'água...";
+
+        // Poll status
+        pollInterval = setInterval(async () => {
+          try {
+            const statusRes = await fetch(`${API_BASE_URL}/status/${job_id}`);
+            const status = await statusRes.json();
+
+            if (status.status === 'processing') {
+              const pct = status.progress || 0;
+              progressFill.style.width = pct + '%';
+              progressPct.textContent = pct + '%';
+              statusText.textContent = pct < 30
+                ? "Detectando marca d'água..."
+                : pct < 80
+                  ? `Processando frames... ${pct}%`
+                  : "Finalizando...";
+            }
+
+            if (status.status === 'done') {
+              clearInterval(pollInterval);
+              progressFill.style.width = '100%';
+              progressPct.textContent = '100%';
+
+              // Download direto via URL
+              btnDownload.href = `${API_BASE_URL}/download/${job_id}`;
+              btnDownload.download = 'video_sem_marca.mp4';
+
+              setTimeout(() => {
+                progressSection.classList.remove('visible');
+                downloadSection.classList.add('visible');
+                btnProcess.disabled = false;
+              }, 600);
+            }
+
+            if (status.status === 'error') {
+              clearInterval(pollInterval);
+              throw new Error(status.message || 'Erro no processamento');
+            }
+          } catch (err) {
+            clearInterval(pollInterval);
+            showError(err.message);
+            btnProcess.disabled = false;
+          }
+        }, 2000);
+
+      } catch (err) {
+        showError(err.message);
+        btnProcess.disabled = false;
+      }
+    });
+
+    function showError(msg) {
+      progressSection.classList.remove('visible');
+      errorMsg.textContent = '⚠ ' + msg;
+      errorMsg.classList.add('visible');
+    }
+
+    btnNew.addEventListener('click', reset);
+  </script>
+</body>
+</html>
